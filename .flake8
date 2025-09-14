@@ -1,0 +1,9 @@
+[flake8]
+ignore =
+    T201
+    # should be no hard line length limit
+    E501
+    # Allow multiple leading # in a comment
+    E266
+    # These rules conflict with black's formatting:
+    W503, E203, E704, E701
