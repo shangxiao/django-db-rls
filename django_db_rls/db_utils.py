@@ -80,6 +80,7 @@ class Policy:
 def enable_rls(schema_editor, model):
     table = schema_editor.quote_name(model._meta.db_table)
     schema_editor.execute(f"ALTER TABLE {table} ENABLE ROW LEVEL SECURITY")
+    schema_editor.execute(f"ALTER TABLE {table} FORCE ROW LEVEL SECURITY")
 
 
 def disable_rls(schema_editor, model):
