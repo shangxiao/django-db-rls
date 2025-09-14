@@ -1,5 +1,6 @@
 from django.db import connection
 from django.db.migrations.operations.base import Operation, OperationCategory
+from django.db.models import Func, IntegerField
 from django.db.models.sql.query import Query
 
 
@@ -20,6 +21,11 @@ def set_config(param, value):
             cursor.execute("select set_config(%s, %s, true)", [param, str(value)])
         else:
             raise RuntimeError("Cannot change config within another config")
+
+
+class AppUser(Func):
+    template = "nullif(current_setting('app.user', true), '')::int"
+    output_field = IntegerField()
 
 
 class Policy:
