@@ -49,6 +49,9 @@ class Policy:
             using, params = where.as_sql(compiler, connection)
             with connection.cursor() as cur:
                 self.using = cur.mogrify(using, params)
+                # pscyopg2
+                if isinstance(self.using, bytes):
+                    self.using = self.using.decode("utf-8")
 
         if self.check:
             if callable(self.check):
@@ -62,6 +65,9 @@ class Policy:
                 check, params = where.as_sql(compiler, connection)
                 with connection.cursor() as cur:
                     self.check = cur.mogrify(check, params)
+                    # pscyopg2
+                    if isinstance(self.using, bytes):
+                        self.using = self.using.decode("utf-8")
 
     def __eq__(self, other):
         return (
