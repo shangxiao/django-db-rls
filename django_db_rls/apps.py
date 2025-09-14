@@ -1,6 +1,9 @@
 from django.apps import AppConfig
+from django.core.checks import Error, register
+from django.db import connection
 from django.db.migrations.autodetector import registry
 from django.db.models.options import DEFAULT_NAMES
+
 from django_db_rls.db_utils import AddPolicy, AlterPolicy, AlterRLS, RemovePolicy
 
 DEFAULT_NAMES.update(["db_rls", "db_rls_policies"])
@@ -65,6 +68,23 @@ def rls_changes(
 
 
 registry.register(rls_changes)
+
+
+@register()
+def check_no_superuser(app_configs, **kwargs):
+    errors = []
+    # specifically check the default connection
+    with connection.cursor() as cursor:
+        cursor.execute("SELECT rolsuper FROM pg_roles WHERE rolname = current_user")
+        if cursor.fetchone()[0]:
+            errors.append(
+                Error(
+                    "The default database has SUPERUSER privilege. Row-level security does NOT apply to SUPERUSER roles.",
+                    hint="Create a new role without SUPERUSER.",
+                    id="django_db_rls.E001",
+                )
+            )
+    return errors
 
 
 class DjangoDbRlsConfig(AppConfig):
