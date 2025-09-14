@@ -111,11 +111,12 @@ def alter_policy(schema_editor, policy_name, model, condition):
 
 
 class AlterRLS(Operation):
-    category = OperationCategory.ALTERATION
-
     def __init__(self, model_name, db_rls):
         self.model_name = model_name
         self.db_rls = db_rls
+        self.category = (
+            OperationCategory.ADDITION if db_rls else OperationCategory.REMOVAL
+        )
 
     def state_forwards(self, app_label, state):
         state.alter_model_options(app_label, self.model_name, {"db_rls": self.db_rls})
@@ -123,7 +124,7 @@ class AlterRLS(Operation):
     def database_forwards(self, app_label, schema_editor, from_state, to_state):
         to_model = to_state.apps.get_model(app_label, self.model_name)
 
-        if getattr(to_model._meta, "db_rls", False):
+        if self.db_rls:
             enable_rls(schema_editor, to_model)
         else:
             disable_rls(schema_editor, to_model)
@@ -132,7 +133,13 @@ class AlterRLS(Operation):
         self.database_forwards(app_label, schema_editor, from_state, to_state)
 
     def describe(self):
-        return "Alter Row Level Security"
+        return ("Enable" if self.db_rls else "Disable") + " Row Level Security"
+
+    @property
+    def migration_name_fragment(self):
+        model_name = self.model_name.lower()
+        verb = "enable" if self.db_rls else "disable"
+        return f"{model_name}_{verb}_rls"
 
 
 class AddPolicy(Operation):
@@ -171,7 +178,11 @@ class AddPolicy(Operation):
         drop_policy(schema_editor, self.name, to_model)
 
     def describe(self):
-        return f"Create Policy {self.name}"
+        return f"Add Policy {self.name}"
+
+    @property
+    def migration_name_fragment(self):
+        return f"add_policy_{self.name}"
 
 
 class RemovePolicy(Operation):
@@ -195,7 +206,11 @@ class RemovePolicy(Operation):
         create_policy(schema_editor, self.name, to_model, self.using, self.check)
 
     def describe(self):
-        return f"Drop Policy {self.name}"
+        return f"Remove Policy {self.name}"
+
+    @property
+    def migration_name_fragment(self):
+        return f"remove_policy_{self.name}"
 
 
 class AlterPolicy(Operation):
@@ -224,3 +239,7 @@ class AlterPolicy(Operation):
 
     def describe(self):
         return f"Alter Policy {self.name}"
+
+    @property
+    def migration_name_fragment(self):
+        return f"alter_policy_{self.name}"
