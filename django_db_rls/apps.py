@@ -74,5 +74,5 @@ class DjangoDbRlsConfig(AppConfig):
     name = "django_db_rls"
 
     def ready(self):
-        # register()(check_no_superuser)
+        register()(check_no_superuser)
         register()(check_rls_tables_are_secure)

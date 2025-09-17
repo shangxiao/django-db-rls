@@ -1,5 +1,5 @@
 from django.apps import apps
-from django.core.checks import Critical, Error
+from django.core.checks import Critical
 from django.db import connection
 
 
@@ -10,7 +10,7 @@ def check_no_superuser(app_configs, **kwargs):
         cursor.execute("SELECT rolsuper FROM pg_roles WHERE rolname = current_user")
         if cursor.fetchone()[0]:
             errors.append(
-                Error(
+                Critical(
                     "The default database has SUPERUSER privilege. Row-level security does NOT apply to SUPERUSER roles.",
                     hint="Create a new role without SUPERUSER.",
                     id="django_db_rls.E001",

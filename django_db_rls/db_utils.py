@@ -1,7 +1,6 @@
 from django.db import connection
 from django.db.migrations.operations.base import Operation, OperationCategory
 from django.db.models import Func, IntegerField
-from django.db.models.sql.query import Query
 
 
 def set_config(param, value):
@@ -26,55 +25,6 @@ def set_config(param, value):
 class AppUser(Func):
     template = "nullif(current_setting('app.user', true), '')::int"
     output_field = IntegerField()
-
-
-class Policy:
-    def __init__(self, *, using, check=None, name=None):
-        self.using = using
-        self.check = check
-        self.name = name
-
-    def compile(self, model):
-        if self.name is None:
-            self.name = f"{model._meta.model_name}_policy"
-
-        if callable(self.using):
-            self.using = self.using()
-        if isinstance(self.using, str):
-            pass
-        else:
-            query = Query(model=model)  # must alias_cols!
-            where = query.build_where(self.using)
-            compiler = query.get_compiler(connection=connection)
-            using, params = where.as_sql(compiler, connection)
-            with connection.cursor() as cur:
-                self.using = cur.mogrify(using, params)
-                # pscyopg2
-                if isinstance(self.using, bytes):
-                    self.using = self.using.decode("utf-8")
-
-        if self.check:
-            if callable(self.check):
-                self.check = self.check()
-            if isinstance(self.check, str):
-                pass
-            else:
-                query = Query(model=model)  # must alias_cols!
-                where = query.build_where(self.check)
-                compiler = query.get_compiler(connection=connection)
-                check, params = where.as_sql(compiler, connection)
-                with connection.cursor() as cur:
-                    self.check = cur.mogrify(check, params)
-                    # pscyopg2
-                    if isinstance(self.using, bytes):
-                        self.using = self.using.decode("utf-8")
-
-    def __eq__(self, other):
-        return (
-            self.name == other.name
-            and self.using == other.using
-            and self.check == other.check
-        )
 
 
 def enable_rls(schema_editor, model):
@@ -159,6 +109,8 @@ class AddPolicy(Operation):
         #     "db_rls_policies",
         #     Policy(using=self.using, check=self.check, name=self.name),
         # )
+        from django_db_rls.policy import Policy
+
         obj = Policy(using=self.using, check=self.check, name=self.name)
         model_state = state.models[app_label, self.model_name]
         # xxx initialisation reqd here
@@ -195,7 +147,7 @@ class RemovePolicy(Operation):
         self.check = check
 
     def state_forwards(self, app_label, state):
-        self._remove_option(app_label, self.model_name, "db_rls_policies", self.name)
+        state._remove_option(app_label, self.model_name, "db_rls_policies", self.name)
 
     def database_forwards(self, app_label, schema_editor, from_state, to_state):
         to_model = to_state.apps.get_model(app_label, self.model_name)
@@ -223,6 +175,8 @@ class AlterPolicy(Operation):
         self.check = check
 
     def state_forwards(self, app_label, state):
+        from django_db_rls.policy import Policy
+
         self._alter_option(
             app_label,
             self.model_name,
