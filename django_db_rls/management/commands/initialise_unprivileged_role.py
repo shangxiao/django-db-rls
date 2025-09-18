@@ -11,7 +11,7 @@ create_rls_role = """\
 DO
 $$
 BEGIN
-  IF NOT EXISTS (SELECT * FROM pg_user WHERE usename = '"{role}"') THEN
+  IF NOT EXISTS (SELECT * FROM pg_user WHERE usename = '{role}') THEN
      CREATE ROLE "{role}" WITH LOGIN NOBYPASSRLS;
   END IF;
 END

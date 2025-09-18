@@ -53,11 +53,12 @@ def drop_policy(schema_editor, policy_name, model):
     schema_editor.execute(f"DROP POLICY IF EXISTS {policy} ON {table}")
 
 
-def alter_policy(schema_editor, policy_name, model, condition):
+def alter_policy(schema_editor, policy_name, model, using, check):
     table = schema_editor.quote_name(model._meta.db_table)
-    schema_editor.execute(
-        f"ALTER POLICY {schema_editor.quote_name(policy_name)} ON {table} USING ({condition}) WITH CHECK ({condition})"
-    )
+    sql = f"ALTER POLICY {schema_editor.quote_name(policy_name)} ON {table} USING ({using})"
+    if check:
+        sql += f" WITH CHECK ({check})"
+    schema_editor.execute(sql)
 
 
 class AlterRLS(Operation):
@@ -177,10 +178,11 @@ class AlterPolicy(Operation):
     def state_forwards(self, app_label, state):
         from django_db_rls.policy import Policy
 
-        self._alter_option(
+        state._alter_option(
             app_label,
             self.model_name,
             "db_rls_policies",
+            self.name,
             Policy(using=self.using, check=self.check, name=self.name),
         )
 
