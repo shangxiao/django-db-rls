@@ -30,11 +30,13 @@ class AppUser(Func):
 def enable_rls(schema_editor, model):
     table = schema_editor.quote_name(model._meta.db_table)
     schema_editor.execute(f"ALTER TABLE {table} ENABLE ROW LEVEL SECURITY")
+    force_rls(schema_editor, model)
 
 
 def disable_rls(schema_editor, model):
     table = schema_editor.quote_name(model._meta.db_table)
     schema_editor.execute(f"ALTER TABLE {table} DISABLE ROW LEVEL SECURITY")
+    no_force_rls(schema_editor, model)
 
 
 def force_rls(schema_editor, model):
