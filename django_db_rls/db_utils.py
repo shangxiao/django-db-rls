@@ -30,12 +30,21 @@ class AppUser(Func):
 def enable_rls(schema_editor, model):
     table = schema_editor.quote_name(model._meta.db_table)
     schema_editor.execute(f"ALTER TABLE {table} ENABLE ROW LEVEL SECURITY")
-    schema_editor.execute(f"ALTER TABLE {table} FORCE ROW LEVEL SECURITY")
 
 
 def disable_rls(schema_editor, model):
     table = schema_editor.quote_name(model._meta.db_table)
     schema_editor.execute(f"ALTER TABLE {table} DISABLE ROW LEVEL SECURITY")
+
+
+def force_rls(schema_editor, model):
+    table = schema_editor.quote_name(model._meta.db_table)
+    schema_editor.execute(f"ALTER TABLE {table} FORCE ROW LEVEL SECURITY")
+
+
+def no_force_rls(schema_editor, model):
+    table = schema_editor.quote_name(model._meta.db_table)
+    schema_editor.execute(f"ALTER TABLE {table} NO FORCE ROW LEVEL SECURITY")
 
 
 def create_policy(schema_editor, policy_name, model, using, check):
@@ -90,6 +99,40 @@ class AlterRLS(Operation):
     def migration_name_fragment(self):
         model_name = self.model_name.lower()
         verb = "enable" if self.db_rls else "disable"
+        return f"{model_name}_{verb}_rls"
+
+
+class AlterForceRLS(Operation):
+    def __init__(self, model_name, db_rls_force):
+        self.model_name = model_name
+        self.db_rls_force = db_rls_force
+        self.category = (
+            OperationCategory.ADDITION if db_rls_force else OperationCategory.REMOVAL
+        )
+
+    def state_forwards(self, app_label, state):
+        state.alter_model_options(
+            app_label, self.model_name, {"db_rls_force": self.db_rls_force}
+        )
+
+    def database_forwards(self, app_label, schema_editor, from_state, to_state):
+        to_model = to_state.apps.get_model(app_label, self.model_name)
+
+        if self.db_rls_force:
+            force_rls(schema_editor, to_model)
+        else:
+            no_force_rls(schema_editor, to_model)
+
+    def database_backwards(self, app_label, schema_editor, from_state, to_state):
+        self.database_forwards(app_label, schema_editor, from_state, to_state)
+
+    def describe(self):
+        return ("Force" if self.db_rls else "No Force") + " Row Level Security"
+
+    @property
+    def migration_name_fragment(self):
+        model_name = self.model_name.lower()
+        verb = "force" if self.db_rls else "no_force"
         return f"{model_name}_{verb}_rls"
 
 

@@ -4,9 +4,15 @@ from django.db.migrations.autodetector import registry
 from django.db.models.options import DEFAULT_NAMES
 
 from django_db_rls.checks import check_no_superuser, check_rls_tables_are_secure
-from django_db_rls.db_utils import AddPolicy, AlterPolicy, AlterRLS, RemovePolicy
+from django_db_rls.db_utils import (
+    AddPolicy,
+    AlterForceRLS,
+    AlterPolicy,
+    AlterRLS,
+    RemovePolicy,
+)
 
-DEFAULT_NAMES.update(["db_rls", "db_rls_policies"])
+DEFAULT_NAMES.update(["db_rls", "db_rls_force", "db_rls_policies"])
 
 
 def rls_changes(
@@ -18,6 +24,13 @@ def rls_changes(
         from_model_state.options.get("db_rls") if from_model_state else None
     ) != to_model_state.options.get("db_rls"):
         operations += [AlterRLS(model_name, to_model_state.options.get("db_rls"))]
+
+    if (
+        from_model_state.options.get("db_rls_force") if from_model_state else None
+    ) != to_model_state.options.get("db_rls_force"):
+        operations += [
+            AlterForceRLS(model_name, to_model_state.options.get("db_rls_force"))
+        ]
 
     from_db_rls_policies = (
         from_model_state.options.get("db_rls_policies", []) if from_model_state else []
