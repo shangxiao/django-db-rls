@@ -86,7 +86,7 @@ class AlterRLS(Operation):
     def database_forwards(self, app_label, schema_editor, from_state, to_state):
         to_model = to_state.apps.get_model(app_label, self.model_name)
 
-        if self.db_rls:
+        if getattr(to_model._meta, "db_rls", False):
             enable_rls(schema_editor, to_model)
         else:
             disable_rls(schema_editor, to_model)
@@ -120,7 +120,7 @@ class AlterForceRLS(Operation):
     def database_forwards(self, app_label, schema_editor, from_state, to_state):
         to_model = to_state.apps.get_model(app_label, self.model_name)
 
-        if self.db_rls_force:
+        if getattr(to_model._meta, "db_rls_force", False):
             force_rls(schema_editor, to_model)
         else:
             no_force_rls(schema_editor, to_model)
